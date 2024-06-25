@@ -1,0 +1,13 @@
+spring:
+  profiles:
+    active: test
+  application:
+    name: newDemo
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  sql:
+    init:
+      mode: always
