@@ -76,6 +76,101 @@ class NewDemoApplicationTests {
 		response.andExpect(MockMvcResultMatchers.jsonPath("$.length()", CoreMatchers.is(4)));
 	}
 
+	// new test for updating
+	package com.example.newDemo;
+
+import com.example.newDemo.entity.Student;
+import com.example.newDemo.repository.StudentRepository;
+import org.hamcrest.CoreMatchers;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
+
+import java.util.Optional;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@Testcontainers
+@ActiveProfiles("test")
+class NewDemoApplicationTests {
+
+    @Container
+    @ServiceConnection
+    private static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>(
+            DockerImageName.parse("artifactory.global.standardchartered.com/postgres:15-alpine")
+                    .asCompatibleSubstituteFor("postgres")
+    );
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Test
+    public void givenStudents_whenGetAllStudents_thenListOfStudents() throws Exception {
+        // Print database connection details for debugging
+        System.out.println(postgreSQLContainer.getDatabaseName());
+        System.out.println(postgreSQLContainer.getPassword());
+        System.out.println(postgreSQLContainer.getUsername());
+        System.out.println(postgreSQLContainer.getJdbcUrl());
+
+        // Perform the GET request
+        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.get("/api/students"));
+
+        // Verify the response
+        response.andExpect(status().isOk());
+        response.andExpect(MockMvcResultMatchers.jsonPath("$.length()", CoreMatchers.is(4)));
+    }
+
+	// new test for updating
+
+    @Test
+    public void givenExistingStudent_whenUpdateStudent_thenStudentUpdated() throws Exception {
+        // Fetch the student by some criteria (e.g., firstName = 'Ankit')
+        Optional<Student> studentOptional = studentRepository.findByFirstName("Ankit");
+        if (studentOptional.isEmpty()) {
+            throw new Exception("Student not found");
+        }
+        Student student = studentOptional.get();
+
+        // Update the student's details
+        student.setFirstName("Jane");
+        student.setLastName("Doe");
+        student.setStipend(2000);
+
+        // Perform the PUT request
+        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.put("/api/students/" + student.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{ \"firstName\": \"Jane\", \"lastName\": \"Doe\", \"stipend\": 2000 }"));
+
+        // Verify the response
+        response.andExpect(status().isOk());
+
+        // Verify the student is updated
+        ResultActions getResponse = mockMvc.perform(MockMvcRequestBuilders.get("/api/students/" + student.getId()));
+
+        getResponse.andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.firstName", CoreMatchers.is("Jane")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.lastName", CoreMatchers.is("Doe")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.stipend", CoreMatchers.is(2000)));
+    }
+}
+
+	
+
 
     // test for adding a new student
 	@Test
