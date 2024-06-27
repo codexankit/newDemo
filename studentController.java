@@ -37,6 +37,20 @@ public class StudentController {
                 .orElseThrow(() -> new
                         ResourceNotFoundException("Student not found with id " + id));
     }
+    
+    @GetMapping("/firstname/{firstName}")
+    public ResponseEntity<Student> getStudentByFirstName(@PathVariable String firstName)
+    {
+        Optional<Student> student = studentRepository.findByFirstName(firstName);
+        if (student.isPresent())
+        {
+            return ResponseEntity.ok(student.get());
+        }
+        else
+        {
+            throw new ResourceNotFoundException("Student not found with first name " + firstName);
+        }
+    }
 
     @PutMapping("/{id}")
     public Student updateStudent(@PathVariable Long id, @RequestBody Student studentDetails) {
