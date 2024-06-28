@@ -1,0 +1,170 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: newDemo
+  labels:
+    app: newDemo
+    application: newDemo
+spec:
+  selector:
+    matchLabels:
+      app: newDemo
+      application: newDemo
+  replicas: 1
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  template:
+    metadata:
+      labels:
+        app: newDemo
+        application: newDemo
+    spec:
+      dnsPolicy: ClusterFirst
+      terminationGracePeriodSeconds: 75
+      containers:
+        - name: newDemo
+          env:
+            - name: "SPRING_PROFILES_ACTIVE"
+              valueFrom:
+                secretKeyRef:
+                  name: springprofile
+                  key: springprofile
+            - name: "SPRING_CLOUD_CONFIG_ENABLED"
+              value: "false"
+            - name: "JAVA_IO_TMPDIR"
+              value: "/tmp"
+            - name: "SPRING_CONFIG_LOCATION"
+              value: "file:/tmp/config/"
+            - name: "INIT_JVM_MEM_ALLOC"
+              value: "2G"
+            - name: "MAX_JVM_MEM_ALLOC"
+              value: "8G"
+            - name: SERVICE_NAME
+              value: "newDemo"
+            - name: CONFIG_VERSION
+              value: "v2.9.18"
+          image: artifactory.global.standardchartered.com/com/sc/rtdo/commonpipeline/ado/rv2-iam-service:imageTags@imageDigest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 2
+              memory: 8G
+            requests:
+              cpu: 1
+              memory: 2G
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 100
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+              scheme: HTTP
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 100
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+              scheme: HTTP
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - mountPath: /etc/secrets/jas/jasypt
+              name: jas-scrt
+#            - mountPath: /etc/secrets/iam/iamdb
+#              name: iam-db
+#            - mountPath: /etc/secrets/iam/iamsvc
+#              name: iam-service-account
+#            - mountPath: /etc/secrets/bop/bopdb
+#              name: bop-db
+#            - mountPath: /etc/secrets/ktlo/ktlodb
+#              name: ktlo-db
+#            - mountPath: /etc/secrets/jks/jkskey
+#              name: iam-jks-key
+#            - mountPath: /etc/secrets/jks/jkspkkey
+#              name: iam-jks-pk-key
+#            - mountPath: /tmp
+#              name: tmp-vol
+#            - mountPath: /opt/splunkforwarder-volume
+#              name: splunk-volume
+#            - mountPath: /etc/secrets/hashivault-secretid
+#              name: hashivault-secretid
+#            - mountPath: /etc/secrets/hashivault-roleid
+#              name: hashivault-roleid
+#            # - mountPath: /app/config/
+#            #   name: rv2-iam-service-configmap
+#            - mountPath: /app/logback
+#              name: iam-logback-configmap
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        runAsNonRoot: true
+      automountServiceAccountToken: false
+      volumes:
+        - name: jas-scrt
+          secret:
+            secretName: jas-scrt
+        - name: iam-db
+          secret:
+            secretName: iam-db
+        - name: iam-service-account
+          secret:
+            secretName: iam-service-account
+        - name: bop-db
+          secret:
+            secretName: bop-db
+        - name: ktlo-db
+          secret:
+            secretName: ktlo-db
+        - name: iam-jks-key
+          secret:
+            secretName: iam-jks-key
+        - name: iam-jks-pk-key
+          secret:
+            secretName: iam-jks-pk-key
+        - name: hashivault-secretid
+          secret:
+            secretName: hashivault-secretid
+        - name: hashivault-roleid
+          secret:
+            secretName: hashivault-roleid
+        - name: tmp-vol
+          emptyDir: {}
+        - name: splunk-volume
+          emptyDir: {}
+        # - name: rv2-iam-service-configmap
+        #   configMap:
+        #     name: rv2-iam-service-configmap
+        - name: iam-logback-configmap
+          configMap:
+            name: iam-logback-configmap
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: project
+                    operator: In
+                    values:
+                      - rv2
